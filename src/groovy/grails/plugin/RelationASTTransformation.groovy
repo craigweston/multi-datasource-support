@@ -119,6 +119,7 @@ class RelationASTTransformation implements ASTTransformation {
     private void addGetterMethodIfNonExistent(ClassNode parentClass, ClassNode returnType, String fieldName, String ds) {
         String getMethodName = "get${fieldName.capitalize()}"
         String idFieldName = "${fieldName}Id"
+
         Expression target = callStaticMethod(returnType, "get", new VariableExpression(idFieldName))
         if (ds) {
             target = callMethod(
@@ -127,31 +128,41 @@ class RelationASTTransformation implements ASTTransformation {
                 new VariableExpression(idFieldName)
             )
         }
-        if (parentClass != null && parentClass.getMethod(getMethodName, Parameter.EMPTY_ARRAY) == null) {
-            MethodNode methodNode = new MethodNode(
-                getMethodName,
-                ACC_PUBLIC,
-                returnType,
-                Parameter.EMPTY_ARRAY,
-                [] as ClassNode[],
-                new BlockStatement(
-                   [
-                       new IfStatement(
-                           new BooleanExpression(
-                               new BinaryExpression(
-                                   new VariableExpression(idFieldName),
-                                   Token.newSymbol("!=", 0, 0),
-                                   ConstantExpression.NULL
-                               )
-                           ),
-                           createBlockReturnStatement(target),
-                           createBlockReturnStatement(ConstantExpression.NULL)
-                       )
-                   ],
-                   new VariableScope()
-                )
+        if (parentClass != null) {
+
+            BlockStatement statement = new BlockStatement(
+               [
+                   new IfStatement(
+                       new BooleanExpression(
+                           new BinaryExpression(
+                               new VariableExpression(idFieldName),
+                               Token.newSymbol("!=", 0, 0),
+                               ConstantExpression.NULL
+                           )
+                       ),
+                       createBlockReturnStatement(target),
+                       createBlockReturnStatement(ConstantExpression.NULL)
+                   )
+               ],
+               new VariableScope()
             )
-            parentClass.addMethod(methodNode)
+
+            MethodNode methodNode = parentClass.getMethod(getMethodName, Parameter.EMPTY_ARRAY)
+            if(methodNode == null) {
+
+                methodNode = new MethodNode(
+                    getMethodName,
+                    ACC_PUBLIC,
+                    returnType,
+                    Parameter.EMPTY_ARRAY,
+                    [] as ClassNode[],
+                    statement
+                )
+                parentClass.addMethod(methodNode)
+
+            } else {
+                methodNode.setCode(statement)
+            }
         }
     }
 
@@ -163,51 +174,62 @@ class RelationASTTransformation implements ASTTransformation {
     private void addSetterMethodIfNonExistent(ClassNode parentClass, ClassNode returnType, String fieldName, String ds) {
         String setMethodName = "set${fieldName.capitalize()}"
         String idFieldName = "${fieldName}Id"
-        if (parentClass != null && parentClass.getMethod(setMethodName, new Parameter(returnType, fieldName)) == null) {
-            MethodNode methodNode = new MethodNode(
-                setMethodName,
-                ACC_PUBLIC,
-                ClassHelper.VOID_TYPE,
-                [new Parameter(returnType, fieldName)] as Parameter[],
-                [] as ClassNode[],
-                new BlockStatement(
-                    [
-                        new IfStatement(
-                            new BooleanExpression(
-                                new BinaryExpression(
-                                    callMethod(
-                                        new VariableExpression(fieldName),
-                                        "getId",
-                                        new ArgumentListExpression(),
-                                        true
-                                    ),
-                                    Token.newSymbol("!=", 0, 0),
-                                    ConstantExpression.NULL
-                                )
-                            ),
-                            new BlockStatement(
-                                [
-                                    new ExpressionStatement(
-                                        new BinaryExpression(
-                                            new VariableExpression(idFieldName),
-                                            Token.newSymbol("=", 0, 0),
-                                            callMethod(
-                                                new VariableExpression(fieldName),
-                                                "getId",
-                                                new ArgumentListExpression()
-                                            )
+
+        if (parentClass != null) {
+
+            BlockStatement statement = new BlockStatement(
+                [
+                    new IfStatement(
+                        new BooleanExpression(
+                            new BinaryExpression(
+                                callMethod(
+                                    new VariableExpression(fieldName),
+                                    "getId",
+                                    new ArgumentListExpression(),
+                                    true
+                                ),
+                                Token.newSymbol("!=", 0, 0),
+                                ConstantExpression.NULL
+                            )
+                        ),
+                        new BlockStatement(
+                            [
+                                new ExpressionStatement(
+                                    new BinaryExpression(
+                                        new VariableExpression(idFieldName),
+                                        Token.newSymbol("=", 0, 0),
+                                        callMethod(
+                                            new VariableExpression(fieldName),
+                                            "getId",
+                                            new ArgumentListExpression()
                                         )
                                     )
-                                ],
-                                new VariableScope()
-                            ),
-                            new EmptyStatement()
-                        )
-                    ],
-                    new VariableScope()
-                )
+                                )
+                            ],
+                            new VariableScope()
+                        ),
+                        new EmptyStatement()
+                    )
+                ],
+                new VariableScope()
             )
-            parentClass.addMethod(methodNode)
+
+            MethodNode methodNode = parentClass.getMethod(setMethodName, new Parameter(returnType, fieldName))
+            if(methodNode == null) {
+
+                methodNode = new MethodNode(
+                    setMethodName,
+                    ACC_PUBLIC,
+                    ClassHelper.VOID_TYPE,
+                    [new Parameter(returnType, fieldName)] as Parameter[],
+                    [] as ClassNode[],
+                    statement
+                )
+                parentClass.addMethod(methodNode)
+
+            } else {
+                methodNode.setCode(statement)
+            }
         }
     }
     
