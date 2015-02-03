@@ -1,138 +1,128 @@
 package testproject
 
-import grails.test.mixin.TestFor
+import spock.lang.Specification
+import spock.lang.Shared
 import grails.test.mixin.Mock
-import org.junit.Before
-import org.junit.Test
-import grails.test.mixin.support.GrailsUnitTestMixin
-import org.junit.Ignore
 
-@Mixin(GrailsUnitTestMixin)
 @Mock([Foo, Bar, Alpha, Beta])
-class RelationUnitTests {
-    
-    Foo foo
-    Bar bar
-    
-    @Before
-    public void setUp() {
-        bar = new Bar(bar: "bar1")
-        assert bar.validate()
-        assert bar.save()
-        foo = new Foo(foo: "foo1")
-        assert foo.validate()
-        assert foo.save()
-    }
-    
-    @Test
-    public void testGetter() {
-        assert foo
-        assert bar
-        assert !(foo.barId)
-        assert bar.id
-        
-        foo.barId = bar.id
-        
-        assert Bar.get(bar.id) == foo.getBar()
-    }
-    
-    @Test
-    public void testSetter() {
-        assert foo
-        assert bar
-        assert !(foo.barId)
-        assert bar.id
+class RelationUnitTests extends Specification {
 
-        assert bar.getId()
+    void "test getter"() {
+        given:
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
 
-        foo.setBar(bar)
-
-        assert foo.barId == bar.id
-        assert foo.getBar() == bar
-    }
-    
-    @Test
-    public void testSetterUnSavedArg() {
-        Bar bar2 = new Bar(bar: "bar2")
-        assert !(foo.barId)
-        
-        foo.setBar(bar2)
-        
-        assert !(foo.barId)
-        assert !(foo.getBar())
-        
-        foo.setBar(bar)
-        assert foo.barId
-        assert foo.getBar() == bar
-        
-        foo.setBar(bar2)
-        assert foo.barId
-        assert foo.getBar() == bar
-    }
-    
-    @Test
-    public void testSetterNullArg() {
-        
-        assert !(foo.barId)
-        
-        foo.setBar(null)
-        
-        assert !(foo.barId)
-        assert !(foo.getBar())
-
-        foo.setBar(bar)
-        assert foo.barId
-        assert foo.getBar() == bar
-        
-        foo.setBar(null)
-        
-        assert foo.barId
-        assert foo.getBar() == bar
-    }
-    
-    @Test
-    public void testGetterNonExistentId() {
-        foo.setBar(bar)
-        
-        assert foo.barId
-        assert foo.getBar() == bar
-        
-        foo.barId = bar.id+1
-        
-        assert !(foo.getBar())
-    }
-    
-    @Test
-    public void testTransientsListCreated() {
-        assert Foo.transients
-        assert Foo.transients.contains("bar")
-    }
-    
-    @Test
-    public void testTransientsListAddedTo() {
-        Alpha alpha = new Alpha(alpha: "alpha")
-        assert alpha.validate()
-        alpha.save()
-        
-        Beta beta = new Beta(beta: "beta")
-        assert beta.validate()
-        beta.save()
-        
-        assert Alpha.transients
-        assert Alpha.transients.contains("beta")
-        assert Alpha.transients.contains("bar")
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.barId = bar.id
+        then:
+            foo.barId
+            Bar.get(bar.id) == foo.getBar()
     }
 
-    @Test
-    public void testIdFieldWorksWithGormGeneratedId() {
-        Alpha alpha = new Alpha(alpha: "alpha")
-        assert alpha.validate()
-        alpha.save()
+    void "test setter"() {
+        given:
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
 
-        Beta beta = new Beta(beta: "beta")
-        assert beta.validate()
-        beta.save()
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.setBar(bar)
+        then:
+            foo.barId == bar.id
+            foo.getBar() == bar
+    }
 
-        assert Alpha.getField("betaId").type == Long
+    void "test setter with unsaved arg"() {
+        given:
+            Bar bar2 = new Bar(bar: "bar2")
+
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.setBar(bar2)
+        then:
+            !(foo.barId)
+            !(foo.getBar())
+    }
+
+    void "test setter with unsaved arg that was previously set"() {
+        given:
+            Bar bar2 = new Bar(bar: "bar2")
+
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
+
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.setBar(bar)
+            foo.setBar(bar2)
+        then:
+            foo.barId
+            foo.getBar() == bar
+    }
+
+    void "test setter with null arg"() {
+        given:
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.setBar(null)
+        then:
+            !(foo.barId)
+            !(foo.getBar())
+    }
+
+    void "test setter with null arg that was previously set"() {
+        given:
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
+
+            Foo foo = new Foo(foo: "foo1")
+            foo.setBar(bar)
+        when:
+            foo.setBar(null)
+        then:
+            foo.barId
+            foo.getBar() == bar
+    }
+
+    void "test getter return null for non existent id"() {
+        given:
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
+            Foo foo = new Foo(foo: "foo1")
+        when:
+            foo.barId = bar.id+1
+        then:
+            !(foo.getBar())
+    }
+
+    void "test that transients list created"() {
+        expect:
+            Foo.transients
+            Foo.transients.contains("bar")
+    }
+
+    void "test that transients list was added to"() {
+        given:
+            Alpha alpha = new Alpha(alpha: "alpha")
+            alpha.save()
+
+            Beta beta = new Beta(beta: "beta")
+            beta.save()
+        expect:
+            Alpha.transients
+            Alpha.transients.contains("beta")
+            Alpha.transients.contains("bar")
+    }
+
+    void "test id field works with gorm generated id"() {
+        given:
+            Alpha alpha = new Alpha(alpha: "alpha")
+            alpha.save()
+
+            Beta beta = new Beta(beta: "beta")
+            beta.save()
+        expect:
+            Alpha.getField("betaId").type == Long
     }
 }
