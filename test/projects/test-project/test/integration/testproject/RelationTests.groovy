@@ -1,51 +1,52 @@
 package testproject
 
-import org.junit.Before
-import org.junit.Test
+import spock.lang.Specification
 
-class RelationTests extends GroovyTestCase {
+class RelationTests extends Specification {
 
-    Foo foo
-    FooLookup fooLookup
-    Bar bar
-
-    @Before
-    public void setUp() {
-        bar = new Bar(bar: "bar1")
-        assert bar.validate()
-        assert bar.save()
-        fooLookup = new FooLookup(foo: "fooLookup")
-        assert fooLookup.validate()
-        assert fooLookup.save()
-        foo = new Foo(foo: "foo1")
-        assert foo.validate()
-        assert foo.save()
-    }
-
-    @Test
     public void testDefaultDataSource() {
+        setup:
 
-        foo.setBar(bar)
+            Foo foo = new Foo(foo: "foo1")
+            foo.save()
 
-        assert foo.getBar() == bar
+            Bar bar = new Bar(bar: "bar1")
+            bar.save()
+
+        when:
+
+            foo.setBar(bar)
+
+        then:
+
+            foo.getBar() == bar
     }
 
-    @Test
     public void testIsDatasourceAware() {
-        Bar bar2 = new Bar(bar: "bar2")
-        assert bar2.validate()
-        assert bar2.lookup.save()
+        setup:
 
-        assert bar2.id
-        assert Bar.lookup.count() == 1
-        assert Bar.count() == 1
-        assert Bar.lookup.get(bar2.id) == bar2
-        assert Bar.get(bar2.id) != bar2
-        
-        fooLookup.setBar(bar2)
-        
-        assert fooLookup.barId == bar2.id
-        assert fooLookup.getBar() == Bar.lookup.get(bar2.id)
-        assert fooLookup.getBar() == bar2
+            Bar bar1 = new Bar(bar: "bar1")
+            bar1.save()
+
+            Bar bar2 = new Bar(bar: "bar2")
+            bar2.lookup.save()
+
+            FooLookup fooLookup = new FooLookup(foo: "fooLookup")
+            fooLookup.save()
+
+        when:
+
+            fooLookup.setBar(bar2)
+
+        then:
+
+            bar2.id
+            Bar.lookup.get(bar2.id) == bar2
+            Bar.get(bar2.id) != bar2
+            Bar.lookup.count() == 1
+            Bar.count() == 1
+            fooLookup.barId == bar2.id
+            fooLookup.getBar() == Bar.lookup.get(bar2.id)
+            fooLookup.getBar() == bar2
     }
 }
